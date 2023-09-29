@@ -1,0 +1,9 @@
+/data/*
+
+*.bmp
+*.jpg
+*.png
+*.txt
+*.pdf
+
+*.o
