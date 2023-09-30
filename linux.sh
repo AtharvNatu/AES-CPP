@@ -2,16 +2,16 @@ clear
 
 cd ./bin
 
-g++ -std=c++20 -o AES ../src/CPU/*.cpp
+g++ -std=c++20 -o AES ../src/*.cpp ../src/CPU/*.cpp 
 
 cp AES ../
 
 cd ..
 
-./AES data/Test.txt data/Encrypted_Data data/Decrypted_Data
+./AES data/Test.txt data/ENC_FILE data/DEC_FILE
 
-# ./AES Data/win.pdf Data/enc.pdf Data/dec.pdf
+# ./AES data/win.pdf data/ENC_FILE data/DEC_FILE
 
-# ./AES Data/Ventura.bmp Data/encVentura.bmp Data/decVentura.bmp
+# ./AES data/Ventura.bmp data/ENC_FILE data/DEC_FILE
 
-# ./AES Data/Floor.png Data/EncFloor.png Data/DecFloor.png
+# ./AES data/Floor.png data/ENC_FILE data/DEC_FILE

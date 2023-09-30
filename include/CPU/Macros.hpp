@@ -1,5 +1,5 @@
 // Macros
-#define DEBUG_MODE          true
+#define DEBUG          true
 
 #define AES_CPU_LENGTH      16
 #define AES_CPU_ROUNDS      10

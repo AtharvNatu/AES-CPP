@@ -5,7 +5,6 @@
 #include <fstream>
 #include <cstring>
 #include <filesystem>
-#include <format>
 #include "Macros.hpp"
 #include "../Common/Logger.hpp"
 
@@ -17,6 +16,7 @@
 using namespace std;
 
 typedef unsigned char byte_t;
+typedef long long hash_t;
 
 class AesCpuBlock
 {
@@ -50,41 +50,45 @@ class AesCpu
     };
 
     ifstream input_file_stream;
-    FILE *encryptionFile = nullptr;
-    FILE *decryptionFile = nullptr;
+    FILE *encryption_file = nullptr;
+    FILE *decryption_file = nullptr;
 
     int block_number;
     int num_zero_pending;
     uintmax_t input_file_size;
+    string input_file_extension, enc_file_with_extension, dec_file_with_extension;
 
-    byte_t aes_key[AES_CPU_LENGTH * (14 + 1)];
+    byte_t aes_encryption_key[AES_CPU_LENGTH * (14 + 1)];
+    byte_t aes_decryption_key[AES_CPU_LENGTH * (14 + 1)];
     char auxillary_buffer[AES_CPU_LENGTH];
 
     int round_constant = 1;
     int key_length = 0;
+    int expanded_key_length = 0;
     int block_length = AES_CPU_LENGTH;
-    int expanded_key_length;
 
     AesCpuBlock *aes_block_array = nullptr;
     Logger *logger = nullptr;
     StopWatchInterface *aes_cpu_timer = nullptr;
 
     // Method Prototypes
-    void initialize(void);
-    int read_input(string, string, string, string);
-    void write_output(byte_t*, int, int);
-    ulong generate_key(void);
-    int expand_key(byte_t*);
-    void init_lookup_tables(byte_t*, byte_t*, byte_t*, byte_t*, byte_t*);
-    void init_lookup_tables_inverse(byte_t*, byte_t*, byte_t*, byte_t*, byte_t*);
-    void sub_bytes(byte_t*, byte_t*);
-    void add_round_key(byte_t*, byte_t*);
-    void shift_rows(byte_t*, byte_t*);
-    void mix_columns(byte_t*, byte_t*);
-    void mix_columns_inverse(byte_t*, byte_t*);
-    void encrypt(AesCpuBlock*, byte_t*, int);
-    void decrypt(AesCpuBlock*, byte_t*, int);
-    void uninitialize(AesCpu*);
+    void initialize(string src_input_file);
+    int read_input(string src_input_file);
+    void set_key(string str_key, byte_t* aes_key, int *expanded_key_length);
+    void verify_key(string encryption_key, string decryption_key);
+    hash_t generate_hash(string input);
+    void write_output(byte_t* data_arr, int length, int file);
+    int expand_key(byte_t* key);
+    void init_lookup_tables(byte_t *sbox, byte_t *shift_row_tab, byte_t *sbox_inverse, byte_t *time, byte_t *shift_row_tab_inverse);
+    void init_lookup_tables_inverse(byte_t *sbox, byte_t *shift_row_tab, byte_t *sbox_inverse, byte_t *time, byte_t *shift_row_tab_inverse);
+    void sub_bytes(byte_t* state, byte_t* sbox);
+    void add_round_key(byte_t* state, byte_t* round_key);
+    void shift_rows(byte_t *state, byte_t *shift_tab);
+    void mix_columns(byte_t *state, byte_t *time);
+    void mix_columns_inverse(byte_t *state, byte_t *time);
+    void encrypt(string dst_enc_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
+    void decrypt(string dst_dec_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
+    void uninitialize(AesCpu* obj);
 };
 
 

@@ -1,31 +1,24 @@
 #include "../../include/CPU/AES-CPU.hpp"
 
 // Method Definitions
-void AesCpu::initialize(void)
+void AesCpu::initialize(string src_input_file)
 {
+    // Code
     logger = new Logger();
     logger->initialize();
 
     sdkCreateTimer(&aes_cpu_timer);
-}
 
-ulong AesCpu::generate_key(void)
-{
-    unsigned long long key;
-
-    srand(time(0));
-
-    // Ensuring MSB is not 0
-    key = rand() % 9 + 1;
-
-    // Adding 15 digits
-    for (unsigned int i = 0; i < 15; i++)
+    int result = read_input(src_input_file);
+    if (result == AES_CPU_FAILURE)
     {
-        key = key * 10;
-        key = key + rand() % 10;
+        if (DEBUG)
+            cerr << endl << "read_input() Failed !!!" << endl;
+        else    
+            logger->print_log("read_input() Failed !!!");
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
     }
-
-    return key;
 }
 
 int AesCpu::expand_key(byte_t* key)
@@ -61,6 +54,7 @@ int AesCpu::expand_key(byte_t* key)
 
 void AesCpu::init_lookup_tables(byte_t *sbox, byte_t *shift_row_tab, byte_t *sbox_inverse, byte_t *time, byte_t *shift_row_tab_inverse)
 {
+    // Code
     shift_row_tab[0] = 0;
     shift_row_tab[1] = 5;
     shift_row_tab[2] = 10;
@@ -110,6 +104,7 @@ void AesCpu::init_lookup_tables(byte_t *sbox, byte_t *shift_row_tab, byte_t *sbo
 
 void AesCpu::init_lookup_tables_inverse(byte_t *sbox, byte_t *shift_row_tab, byte_t *sbox_inverse, byte_t *time, byte_t *shift_row_tab_inverse)
 {
+    // Code
     shift_row_tab[0] = 0;
     shift_row_tab[1] = 5;
     shift_row_tab[2] = 10;
@@ -156,26 +151,33 @@ void AesCpu::init_lookup_tables_inverse(byte_t *sbox, byte_t *shift_row_tab, byt
 
 void AesCpu::sub_bytes(byte_t* state, byte_t* sbox)
 {
+    // Code
     for (int i = 0; i < AES_CPU_LENGTH; i++)
         state[i] = sbox[state[i]];
 }
 
 void AesCpu::add_round_key(byte_t* state, byte_t* round_key)
 {
+    // Code
     for (int i = 0; i < AES_CPU_LENGTH; i++)
         state[i] = state[i] ^ round_key[i];
 }
 
 void AesCpu::shift_rows(byte_t *state, byte_t *shift_tab)
 {
+    // Variable Declarations
     byte_t aux_array[AES_CPU_LENGTH];
+
+    // Code
     memcpy(aux_array, state, AES_CPU_LENGTH);
+
     for (int i = 0; i < AES_CPU_LENGTH; i++)
         state[i] = aux_array[shift_tab[i]];
 }
 
 void AesCpu::mix_columns(byte_t *state, byte_t *time)
 {
+    // Code
     for (int i = 0; i < AES_CPU_LENGTH; i += 4)
     {
         byte_t s0 = state[i + 0];
@@ -194,6 +196,7 @@ void AesCpu::mix_columns(byte_t *state, byte_t *time)
 
 void AesCpu::mix_columns_inverse(byte_t *state, byte_t *time)
 {
+    // Code
     for (int i = 0; i < AES_CPU_LENGTH; i += 4)
     {
         byte_t s0 = state[i + 0];
@@ -213,7 +216,7 @@ void AesCpu::mix_columns_inverse(byte_t *state, byte_t *time)
     }
 }
 
-void AesCpu::encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int block_number)
+void AesCpu::encrypt(string dst_enc_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number)
 {
     // Variable Declarations
     byte_t shift_row_tab[AES_CPU_LENGTH];
@@ -225,6 +228,18 @@ void AesCpu::encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int block_number)
     int i;
 
     // Code
+    enc_file_with_extension = dst_enc_file.append(input_file_extension);
+    encryption_file = fopen(enc_file_with_extension.c_str(), "wb");
+    if (encryption_file == nullptr)
+    {
+        if (DEBUG)
+            cerr << endl << "Failed To Open Encryption File !!!" << endl;
+        else
+            logger->print_log("Failed To Open Encryption File !!!");
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
+    }
+    
     init_lookup_tables(sbox, shift_row_tab, sbox_inverse, time, shift_row_tab_inverse);
 
     for (int i = 0; i < block_number - 1; i++)
@@ -255,7 +270,7 @@ void AesCpu::encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int block_number)
         write_output(aes_block_array[i].block, block_length, 1);
 }   
 
-void AesCpu::decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int block_number)
+void AesCpu::decrypt(string dst_dec_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number)
 {
     // Variable Declarations
     byte_t shift_row_tab[AES_CPU_LENGTH];
@@ -267,6 +282,18 @@ void AesCpu::decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int block_number)
     int i;
 
     // Code
+    dec_file_with_extension = dst_dec_file.append(input_file_extension);
+    decryption_file = fopen(dec_file_with_extension.c_str(), "wb");
+    if (decryption_file == nullptr)
+    {
+        if (DEBUG)
+            cerr << endl << "Failed To Open Decryption File !!!" << endl;
+        else
+            logger->print_log("Failed To Open Decryption File !!!");
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
+    }
+
     init_lookup_tables_inverse(sbox, shift_row_tab, sbox_inverse, time, shift_row_tab_inverse);
 
     for (int i = 0; i < block_number - 1; i++)
@@ -302,90 +329,28 @@ void AesCpu::decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int block_number)
         write_output(aes_block_array[block_number - 1].block, block_length, 3);
 }   
 
-void AesCpu::write_output(byte_t* data_arr, int length, int file)
+int AesCpu::read_input(string src_input_file)
 {
-    // Variable Declarations
-    int flag = 0;
-
     // Code
-    switch(file)
-	{
-		case 1:
-			for (int i = 0; i < length; i++)
-				fprintf(encryptionFile, "%02x", data_arr[i]);
-			fprintf(encryptionFile, "\n");
-		break;
-
-		case 2:
-			for (int i = 0; i < length; i++)
-			{
-				fprintf(decryptionFile, "%c", data_arr[i]);
-				if (data_arr[i] == '\n')
-					flag++;
-			}
-		break;
-
-		case 3:
-			for (int i = 0; i < length; i++)
-			{
-				if (data_arr[i] == '\0')
-					return;
-				fprintf(decryptionFile, "%c", data_arr[i]);
-				if (data_arr[i] == '\n')
-					flag++;
-			}
-		break;
-	}
-
-}
-
-int AesCpu::read_input(string srcInputFile, string strKey, string dstEncFile, string dstDecFile)
-{
-    input_file_stream.open(srcInputFile, ifstream::binary);
+    input_file_stream.open(src_input_file, ifstream::binary);
     if (!input_file_stream)
     {
-        if (DEBUG_MODE)
-            cerr << endl << "Failed To Open input_file_stream !!!" << endl;
+        if (DEBUG)
+            cerr << endl << "Failed To Open Input File !!!" << endl;
         else
-            logger->print_log("Failed To Open input_file_stream !!!");
-        uninitialize(this);
+            logger->print_log("Failed To Open Input File !!!");
         return AES_CPU_FAILURE;
     }
 
-    input_file_size = filesystem::file_size(srcInputFile);
+    input_file_size = filesystem::file_size(src_input_file);
+    input_file_extension = filesystem::path(src_input_file).extension();
     block_number = input_file_size / AES_CPU_LENGTH;
     num_zero_pending = input_file_size % AES_CPU_LENGTH;
-
-    memcpy(aes_key, to_string(generate_key()).c_str(), AES_CPU_LENGTH);
-
-    expanded_key_length = expand_key(aes_key);
 
     if (num_zero_pending != 0)
         aes_block_array = new AesCpuBlock[block_number + 1];
     else
         aes_block_array = new AesCpuBlock[block_number];
-
-    encryptionFile = fopen(dstEncFile.c_str(), "wb");
-    if (encryptionFile == nullptr)
-    {
-        if (DEBUG_MODE)
-            cerr << endl << "Failed To Open Encryption File !!!" << endl;
-        else
-            logger->print_log("Failed To Open Encryption File !!!");
-        uninitialize(this);
-        return AES_CPU_FAILURE;
-    }
-
-    decryptionFile = fopen(dstDecFile.c_str(), "wb");
-    if (decryptionFile == nullptr)
-    {
-        if (DEBUG_MODE)
-            cerr << endl << "Failed To Open Decryption File !!!" << endl;
-        else
-            logger->print_log("Failed To Open Decryption File !!!");
-        uninitialize(this);
-        return AES_CPU_FAILURE;
-    }
 
     for (int i = 0; i < block_number; i++)
     {
@@ -407,24 +372,113 @@ int AesCpu::read_input(string srcInputFile, string strKey, string dstEncFile, st
     return AES_CPU_SUCCESS;
 }
 
+hash_t AesCpu::generate_hash(string input)
+{
+    // Variable Declarations
+    long long k = 7;
+
+    // Code
+    for (int i = 0; i < input.length(); i++)
+    {
+        k *= 23;
+        k += input[i];
+        k *= 13;
+        k %= 1000000009;
+    }
+
+    return k;
+}
+
+void AesCpu::set_key(string str_key, byte_t* aes_key, int *expanded_key_length)
+{
+    // Code
+    if (str_key.length() <= AES_CPU_LENGTH)
+    {
+        int padding_length = AES_CPU_LENGTH - str_key.length();
+
+        for (int i = 0; i < padding_length; i++)
+            str_key.insert(str_key.length(), "0");
+    }
+    else
+    {
+        cerr << endl << "Key Length Should Not Be Greater Than 16 ... Exiting !!!" << endl;
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
+    }
+    
+    memcpy(aes_key, str_key.c_str(), AES_CPU_LENGTH);
+
+    *expanded_key_length = expand_key(aes_key);
+}
+
+void AesCpu::verify_key(string encryption_key, string decryption_key)
+{
+    if (generate_hash(encryption_key) != generate_hash(decryption_key))
+    {
+        if (DEBUG)
+            cerr << endl << "Invalid Key Entered ... Exiting !!!" << endl;
+        else
+            logger->print_log("Invalid Key Entered ... Exiting !!!");
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
+    }
+}
+
+void AesCpu::write_output(byte_t* data_arr, int length, int file)
+{
+    // Variable Declarations
+    int flag = 0;
+
+    // Code
+    switch(file)
+	{
+		case 1:
+			for (int i = 0; i < length; i++)
+				fprintf(encryption_file, "%02x", data_arr[i]);
+			fprintf(encryption_file, "\n");
+		break;
+
+		case 2:
+			for (int i = 0; i < length; i++)
+			{
+				fprintf(decryption_file, "%c", data_arr[i]);
+				if (data_arr[i] == '\n')
+					flag++;
+			}
+		break;
+
+		case 3:
+			for (int i = 0; i < length; i++)
+			{
+				if (data_arr[i] == '\0')
+					return;
+				fprintf(decryption_file, "%c", data_arr[i]);
+				if (data_arr[i] == '\n')
+					flag++;
+			}
+		break;
+	}
+}
+
 void AesCpu::uninitialize(AesCpu* obj)
 {
+    // Code
     if (aes_block_array)
     {
         delete aes_block_array;
         aes_block_array = nullptr;
     }
 
-    if (decryptionFile)
+    if (decryption_file)
     {
-        fclose(decryptionFile);
-        decryptionFile = nullptr;
+        fclose(decryption_file);
+        decryption_file = nullptr;
     }
         
-    if (encryptionFile)
+    if (encryption_file)
     {
-        fclose(encryptionFile);
-        encryptionFile = nullptr;
+        fclose(encryption_file);
+        encryption_file = nullptr;
     }
 
     if (input_file_stream)
@@ -450,40 +504,3 @@ void AesCpu::uninitialize(AesCpu* obj)
     }
 }
 
-int main(int argc, char** argv)
-{
-    AesCpu *aes_cpu = nullptr;
-
-    aes_cpu = new AesCpu();
-
-    aes_cpu->initialize();
-
-    int result = aes_cpu->read_input(argv[1], "key", argv[2], argv[3]);
-    if (result == AES_CPU_FAILURE)
-    {
-        if (DEBUG_MODE)
-            cerr << endl << "read_input() Failed !!!" << endl;
-        else    
-            aes_cpu->logger->print_log("read_input() Failed !!!");
-        aes_cpu->uninitialize(aes_cpu);
-        return AES_CPU_FAILURE;
-    }
-
-    sdkStartTimer(&aes_cpu->aes_cpu_timer);
-    aes_cpu->encrypt(aes_cpu->aes_block_array, aes_cpu->aes_key, aes_cpu->block_number);
-    sdkStopTimer(&aes_cpu->aes_cpu_timer);
-    
-    if (DEBUG_MODE)
-        cout << endl << "Time required for Encryption : " << sdkGetTimerValue(&aes_cpu->aes_cpu_timer) << " ms " << endl;
-    
-    sdkStartTimer(&aes_cpu->aes_cpu_timer);
-    aes_cpu->decrypt(aes_cpu->aes_block_array, aes_cpu->aes_key, aes_cpu->block_number);
-    sdkStopTimer(&aes_cpu->aes_cpu_timer);
-
-    if (DEBUG_MODE)
-        cout << endl << "Time required for Decryption : " << sdkGetTimerValue(&aes_cpu->aes_cpu_timer) << " ms " << endl;
-    
-    aes_cpu->uninitialize(aes_cpu);
-
-    return AES_CPU_SUCCESS;
-}
