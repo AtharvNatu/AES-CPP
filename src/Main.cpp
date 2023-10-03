@@ -15,8 +15,11 @@ int main(int argc, char** argv)
     cin >> enc_key;
     aes_cpu->set_key(enc_key, aes_cpu->aes_encryption_key, &aes_cpu->expanded_key_length);
 
+    aes_cpu->create_encryption_file(argv[2]);
+    aes_cpu->create_decryption_file(argv[3]);
+
     sdkStartTimer(&aes_cpu->aes_cpu_timer);
-    aes_cpu->encrypt(argv[2], aes_cpu->aes_block_array, aes_cpu->aes_encryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
+    aes_cpu->encrypt(aes_cpu->aes_block_array, aes_cpu->aes_encryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
     sdkStopTimer(&aes_cpu->aes_cpu_timer);
     
     if (DEBUG)
@@ -32,7 +35,7 @@ int main(int argc, char** argv)
     aes_cpu->set_key(enc_key, aes_cpu->aes_decryption_key, &aes_cpu->expanded_key_length);
 
     sdkStartTimer(&aes_cpu->aes_cpu_timer);
-    aes_cpu->decrypt(argv[3], aes_cpu->aes_block_array, aes_cpu->aes_decryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
+    aes_cpu->decrypt(aes_cpu->aes_block_array, aes_cpu->aes_decryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
     sdkStopTimer(&aes_cpu->aes_cpu_timer);
 
     if (DEBUG)

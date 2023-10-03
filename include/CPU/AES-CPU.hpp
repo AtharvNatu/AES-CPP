@@ -74,6 +74,8 @@ class AesCpu
     // Method Prototypes
     void initialize(string src_input_file);
     int read_input(string src_input_file);
+    void create_encryption_file(string dst_enc_file);
+    void create_decryption_file(string dst_dec_file);
     void set_key(string str_key, byte_t* aes_key, int *expanded_key_length);
     void verify_key(string encryption_key, string decryption_key);
     hash_t generate_hash(string input);
@@ -86,8 +88,8 @@ class AesCpu
     void shift_rows(byte_t *state, byte_t *shift_tab);
     void mix_columns(byte_t *state, byte_t *time);
     void mix_columns_inverse(byte_t *state, byte_t *time);
-    void encrypt(string dst_enc_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
-    void decrypt(string dst_dec_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
+    void encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
+    void decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
     void uninitialize(AesCpu* obj);
 };
 
