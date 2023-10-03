@@ -216,7 +216,7 @@ void AesCpu::mix_columns_inverse(byte_t *state, byte_t *time)
     }
 }
 
-void AesCpu::encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number)
+void AesCpu::encrypt(string dst_enc_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number)
 {
     // Variable Declarations
     byte_t shift_row_tab[AES_CPU_LENGTH];
@@ -228,6 +228,21 @@ void AesCpu::encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_l
     int i;
 
     // Code
+
+    // Create File
+    enc_file_with_extension = dst_enc_file.append(input_file_extension);
+    encryption_file = fopen(enc_file_with_extension.c_str(), "wb");
+    if (encryption_file == nullptr)
+    {
+        if (DEBUG)
+            cerr << endl << "Failed To Open Encryption File !!!" << endl;
+        else
+            logger->print_log("Failed To Open Encryption File !!!");
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
+    }
+    
+    sdkStartTimer(&aes_cpu_timer);
     init_lookup_tables(sbox, shift_row_tab, sbox_inverse, time, shift_row_tab_inverse);
 
     for (int i = 0; i < block_number - 1; i++)
@@ -253,12 +268,15 @@ void AesCpu::encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_l
         for (int j = 0; j < AES_CPU_LENGTH; j++)
             aes_block_array[block_number].block[j] = block[j];
     }
+    sdkStopTimer(&aes_cpu_timer);
+    aes_cpu_encryption_time = sdkGetTimerValue(&aes_cpu_timer);
 
+    // Write to File
     for (int i = 0; i < block_number - 1; i++)
         write_output(aes_block_array[i].block, block_length, 1);
 }   
 
-void AesCpu::decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number)
+void AesCpu::decrypt(string dst_dec_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number)
 {
     // Variable Declarations
     byte_t shift_row_tab[AES_CPU_LENGTH];
@@ -270,6 +288,19 @@ void AesCpu::decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_l
     int i;
 
     // Code
+    dec_file_with_extension = dst_dec_file.append(input_file_extension);
+    decryption_file = fopen(dec_file_with_extension.c_str(), "wb");
+    if (decryption_file == nullptr)
+    {
+        if (DEBUG)
+            cerr << endl << "Failed To Open Decryption File !!!" << endl;
+        else
+            logger->print_log("Failed To Open Decryption File !!!");
+        uninitialize(this);
+        exit(AES_CPU_FAILURE);
+    }
+
+    sdkStartTimer(&aes_cpu_timer);
     init_lookup_tables_inverse(sbox, shift_row_tab, sbox_inverse, time, shift_row_tab_inverse);
 
     for (int i = 0; i < block_number - 1; i++)
@@ -295,6 +326,8 @@ void AesCpu::decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_l
         for (int j = 0; j < AES_CPU_LENGTH; j++)
             aes_block_array[block_number].block[j] = block[j];
     }
+    sdkStopTimer(&aes_cpu_timer);
+    aes_cpu_decryption_time = sdkGetTimerValue(&aes_cpu_timer);
 
     for (int i = 0; i < block_number - 1; i++)
         write_output(aes_block_array[i].block, block_length, 2);
@@ -346,36 +379,6 @@ int AesCpu::read_input(string src_input_file)
     }
 
     return AES_CPU_SUCCESS;
-}
-
-void AesCpu::create_encryption_file(string dst_enc_file)
-{
-    enc_file_with_extension = dst_enc_file.append(input_file_extension);
-    encryption_file = fopen(enc_file_with_extension.c_str(), "wb");
-    if (encryption_file == nullptr)
-    {
-        if (DEBUG)
-            cerr << endl << "Failed To Open Encryption File !!!" << endl;
-        else
-            logger->print_log("Failed To Open Encryption File !!!");
-        uninitialize(this);
-        exit(AES_CPU_FAILURE);
-    }
-}
-
-void AesCpu::create_decryption_file(string dst_dec_file)
-{
-    dec_file_with_extension = dst_dec_file.append(input_file_extension);
-    decryption_file = fopen(dec_file_with_extension.c_str(), "wb");
-    if (decryption_file == nullptr)
-    {
-        if (DEBUG)
-            cerr << endl << "Failed To Open Decryption File !!!" << endl;
-        else
-            logger->print_log("Failed To Open Decryption File !!!");
-        uninitialize(this);
-        exit(AES_CPU_FAILURE);
-    }
 }
 
 hash_t AesCpu::generate_hash(string input)

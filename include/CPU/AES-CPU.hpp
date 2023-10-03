@@ -49,6 +49,10 @@ class AesCpu
         0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16  /*f*/
     };
 
+    AesCpuBlock *aes_block_array = nullptr;
+    Logger *logger = nullptr;
+    StopWatchInterface *aes_cpu_timer = nullptr;
+    
     ifstream input_file_stream;
     FILE *encryption_file = nullptr;
     FILE *decryption_file = nullptr;
@@ -66,16 +70,11 @@ class AesCpu
     int key_length = 0;
     int expanded_key_length = 0;
     int block_length = AES_CPU_LENGTH;
-
-    AesCpuBlock *aes_block_array = nullptr;
-    Logger *logger = nullptr;
-    StopWatchInterface *aes_cpu_timer = nullptr;
+    float aes_cpu_encryption_time = 0.0, aes_cpu_decryption_time = 0.0;
 
     // Method Prototypes
     void initialize(string src_input_file);
     int read_input(string src_input_file);
-    void create_encryption_file(string dst_enc_file);
-    void create_decryption_file(string dst_dec_file);
     void set_key(string str_key, byte_t* aes_key, int *expanded_key_length);
     void verify_key(string encryption_key, string decryption_key);
     hash_t generate_hash(string input);
@@ -88,8 +87,8 @@ class AesCpu
     void shift_rows(byte_t *state, byte_t *shift_tab);
     void mix_columns(byte_t *state, byte_t *time);
     void mix_columns_inverse(byte_t *state, byte_t *time);
-    void encrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
-    void decrypt(AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
+    void encrypt(string dst_enc_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
+    void decrypt(string dst_dec_file, AesCpuBlock* aes_block_arr, byte_t* key, int expanded_key_length, int block_number);
     void uninitialize(AesCpu* obj);
 };
 
