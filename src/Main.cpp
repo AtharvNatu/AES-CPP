@@ -20,7 +20,9 @@ int main(int argc, char** argv)
     sdkStopTimer(&aes_cpu->aes_cpu_timer);
     
     if (DEBUG)
-        cout << endl << "Time required for Encryption : " << sdkGetTimerValue(&aes_cpu->aes_cpu_timer) << " ms " << endl;
+        cout << endl << "Time required for AES 128-bit Encryption : " << sdkGetTimerValue(&aes_cpu->aes_cpu_timer) << " ms " << endl;
+    else
+        aes_cpu->logger->print_log("Time required for AES 128-bit Encryption : %f", sdkGetTimerValue(&aes_cpu->aes_cpu_timer), " ms ");
     
     cout << endl << "Enter Decryption Key = ";
     cin >> dec_key;
@@ -34,9 +36,11 @@ int main(int argc, char** argv)
     sdkStopTimer(&aes_cpu->aes_cpu_timer);
 
     if (DEBUG)
-        cout << endl << "Time required for Decryption : " << sdkGetTimerValue(&aes_cpu->aes_cpu_timer) << " ms " << endl;
+        cout << endl << "Time required for AES 128-bit Decryption : " << sdkGetTimerValue(&aes_cpu->aes_cpu_timer) << " ms " << endl;
+    else
+        aes_cpu->logger->print_log("Time required for AES 128-bit Decryption : %f", sdkGetTimerValue(&aes_cpu->aes_cpu_timer), " ms ");
     
     aes_cpu->uninitialize(aes_cpu);
-
+    
     return AES_CPU_SUCCESS;
 }

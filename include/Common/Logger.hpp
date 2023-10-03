@@ -3,6 +3,7 @@
 #include <iostream>
 #include <ctime>
 #include <cstring>
+#include <cstdarg>
 #include <fstream>
 #include <cstdlib>
 #include <chrono>
@@ -19,7 +20,7 @@ class Logger
 
     // Method Declarations
     void initialize(void);
-    void print_log(string);
+    void print_log(const char* fmt, ...);
     string get_current_time(void);
     void uninitialize(void);
 };

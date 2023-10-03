@@ -15,3 +15,5 @@ cd ..
 # ./AES data/Ventura.bmp data/ENC_FILE data/DEC_FILE
 
 # ./AES data/Floor.png data/ENC_FILE data/DEC_FILE
+
+# valgrind --tool=massif --pages-as-heap=yes ./AES data/5gb-file.dat data/ENC_FILE data/DEC_FILE
