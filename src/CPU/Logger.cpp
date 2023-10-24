@@ -1,6 +1,6 @@
 #include "../../include/Common/Logger.hpp"
 
-void Logger::initialize(void)
+void initialize(void)
 {   
     // Code
     log_file = fopen("Log.txt", "a+");
@@ -13,7 +13,7 @@ void Logger::initialize(void)
         print_log("Log File Opened");
 }
 
-void Logger::print_log(const char* fmt, ...)
+void print_log(const char* fmt, ...)
 {
     // Variable Declarations
     va_list arg_list;
@@ -33,7 +33,7 @@ void Logger::print_log(const char* fmt, ...)
     fprintf(log_file, "\n");
 }
 
-string Logger::get_current_time(void)
+string get_current_time(void)
 {
     time_t current_time = chrono::system_clock::to_time_t(chrono::system_clock::now());
     string str_time(30, '\0');
@@ -41,7 +41,7 @@ string Logger::get_current_time(void)
     return str_time;
 }
 
-void Logger::uninitialize(void)
+void uninitialize(void)
 {
     if (log_file)
     {

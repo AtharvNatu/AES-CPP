@@ -2,7 +2,7 @@ clear
 
 cd ./bin
 
-g++ -std=c++20 -o AES ../src/*.cpp ../src/CPU/*.cpp 
+g++ -std=c++20 -o AES ../test/*.cpp ../src/CPU/*.cpp 
 
 cp AES ../
 

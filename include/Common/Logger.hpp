@@ -10,18 +10,13 @@
 
 using namespace std;
 
-class Logger
-{
-    public:
+// Variable Declarations
+FILE* log_file = nullptr;
+string log_message;
 
-    // Member Declarations
-    FILE* log_file = nullptr;
-    string log_message;
-
-    // Method Declarations
-    void initialize(void);
-    void print_log(const char* fmt, ...);
-    string get_current_time(void);
-    void uninitialize(void);
-};
+// Function Declarations
+void initialize(void);
+void print_log(const char* fmt, ...);
+string get_current_time(void);
+void uninitialize(void);
 
