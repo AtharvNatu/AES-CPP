@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
-#include <omp.h>
 
 #include "../Common/Tables.hpp"
 #include "../Common/Helper.hpp"
