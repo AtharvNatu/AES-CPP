@@ -10,10 +10,6 @@
 
 using namespace std;
 
-// Variable Declarations
-FILE* log_file = nullptr;
-string log_message;
-
 // Function Declarations
 void initialize(void);
 void print_log(const char* fmt, ...);

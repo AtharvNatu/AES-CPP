@@ -1,5 +1,8 @@
 #include "../../include/Common/Helper.hpp"
 
+// Global Variables
+std::hash<string> hash_t;
+
 // Function Definitions
 const vector<byte_arr_t> read_data_file(string src_input_file)
 {
@@ -38,6 +41,23 @@ const vector<byte_arr_t> read_data_file(string src_input_file)
     input_file_stream.close();
     
     return byte_data;
+}
+
+void write_encrypted_data(vector<byte_arr_t> data_vector, byte_arr_t enc_key, string output_file)
+{
+    // Variable Declarations
+    fstream data_file;
+
+    // Code
+    data_file.open(output_file, ios::out);
+    if (data_file.is_open())
+    {
+        data_file << get_hash(reinterpret_cast<char*>(enc_key.data()));
+        data_file << endl;
+        for (size_t i = 0; i < data_vector.size(); i++)
+            data_file << data_vector[i].data();
+        data_file.close();
+    }
 }
 
 void print_byte(byte_t byte)
@@ -105,7 +125,7 @@ byte_arr_t XOR(const byte_arr_t &arr1, const byte_arr_t &arr2)
     return result;
 }
 
-void XOR(byte_arr_t &arr1, byte_arr_t &arr2, const unsigned int length)
+void XOR(byte_arr_t &arr1, byte_arr_t &arr2, int length)
 {
     // Code
     for (int i = 0; i < length; i++)
@@ -166,25 +186,33 @@ byte_arr_t generate_iv(int iv_length)
     return byte_array;
 }
 
-hash_t generate_hash(string input)
+size_t get_hash(string input)
 {
-    // Variable Declarations
-    long long k = 7;
-
-    // Code
-    for (int i = 0; i < input.length(); i++)
-    {
-        k *= 23;
-        k += input[i];
-        k *= 13;
-        k %= 1000000009;
-    }
-
-    return k;
+    return hash_t(input);
 }
 
-status_t set_key(string str_key, byte_t* aes_key, int *expanded_key_length)
+string get_key(string input_file)
 {
+    // Variable Declarations
+    fstream data_file;
+    string key_string;
+
+    // Code
+    data_file.open(input_file, ios::in);
+    if (data_file.is_open())
+    {
+        getline(data_file, key_string);
+        data_file.close();
+    }
+
+    return key_string;
+}
+
+byte_arr_t set_key(string str_key)
+{
+    // Variable Declarations
+    byte_arr_t aes_key;
+
     // Code
     if (str_key.length() <= AES_LENGTH)
     {
@@ -192,25 +220,35 @@ status_t set_key(string str_key, byte_t* aes_key, int *expanded_key_length)
 
         for (int i = 0; i < padding_length; i++)
             str_key.insert(str_key.length(), "0");
+
+        for (int i = 0; i < AES_LENGTH; i++)
+            aes_key.push_back(str_key.at(i));
     }
     else
     {
         cerr << endl << "Key Length Should Not Be Greater Than 16 ... Exiting !!!" << endl;
-        return AES_FAILURE;
+        exit(AES_FAILURE);
     }
     
-    memcpy(aes_key, str_key.c_str(), AES_LENGTH);
+    // memcpy(aes_key, str_key.c_str(), AES_LENGTH);
 
-    *expanded_key_length = expand_key(aes_key);
+    // *expanded_key_length = expand_key(aes_key);
+
+    return aes_key;
+
 }
 
-status_t verify_key(string encryption_key, string decryption_key)
+status_t verify_key(string encryption_key, unsigned char* decryption_key)
 {
     // Code
-    if (generate_hash(encryption_key) != generate_hash(decryption_key))
+    if (encryption_key != to_string(get_hash(reinterpret_cast<char*>(decryption_key))))
     {
         if (DEBUG)
             cerr << endl << "Invalid Key Entered ... Exiting !!!" << endl;
         return AES_FAILURE;
     }
+    else
+        cout << endl << "Valid Key ..." << endl;
+
+    return AES_SUCCESS;
 }

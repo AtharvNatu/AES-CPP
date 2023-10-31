@@ -13,7 +13,7 @@ using namespace std;
 
 // I/O Releated Functions 
 const vector<byte_arr_t> read_data_file(string src_input_file);
-void write_data_file(byte_t* data_arr, int length, int file);
+void write_encrypted_data(vector<byte_arr_t> data_vector, byte_arr_t enc_key, string output_file);
 
 // Debugging
 void print_byte(byte_t byte);
@@ -23,17 +23,18 @@ status_t compare_vector_of_byte_arrays(const vector<byte_arr_t> &arr1, const vec
 
 // XOR Operations
 byte_arr_t XOR(const byte_arr_t &arr1, const byte_arr_t &arr2);
-void XOR(byte_arr_t &arr1, byte_arr_t &arr2, const unsigned int length);
+void XOR(byte_arr_t &arr1, byte_arr_t &arr2, int length);
 
 // Counter Related Functions
 byte_arr_t increment_counter(const byte_arr_t &start_counter, const unsigned int round);
 void generate_counters(vector<byte_arr_t> &counters, const byte_arr_t &iv);
 
 // Key Related Functions
-status_t set_key(string str_key, byte_t* aes_key, int *expanded_key_length);
-status_t verify_key(string encryption_key, string decryption_key);
-hash_t generate_hash(string input);
-int expand_key(byte_t* key);
+string get_key(string input_file);
+byte_arr_t set_key(string str_key);
+status_t verify_key(string encryption_key, unsigned char* decryption_key);
+size_t get_hash(string input);
 
 // AES IV Related Functions
 byte_arr_t generate_iv(int iv_length);
+                                                                           

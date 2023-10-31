@@ -1,16 +1,13 @@
 #include "../include/CPU/AES-CPU.hpp"
 
 int main(int argc, char** argv)
-{
-    // Variable Declarations
-    AesCpu *aes_cpu = nullptr;
-    string enc_key, dec_key;
+{ 
     int choice = -1;
 
     // Code
     while (true)
     {
-        cout << endl << "AES 128-bit Encryption" << endl;
+        cout << endl << "AES 128-bit Encryption and Decryption" << endl;
         cout << "--------------------------------------------------------------------" << endl;
         cout << "1. Encrypt File" << endl << "2. Decrypt File" << endl << "3. Exit" << endl << "\nEnter your choice : ";
         cin >> choice;
@@ -18,55 +15,75 @@ int main(int argc, char** argv)
         switch(choice)
         {
             case 1:
+            {
+                // Variable Declarations
+                string user_key, file_key;
+                byte_arr_t enc_key, dec_key, iv;
+                string input_file, output_file, output_file_name;
 
-                aes_cpu = new AesCpu();
+                input_file = argv[1];
+                output_file_name = filesystem::path(input_file).filename();
+                output_file = output_file_name + ".enc";
 
-                aes_cpu->initialize(argv[1]);
+                vector<byte_arr_t> file_data = read_data_file(argv[1]);
 
                 cout << endl << "Enter Encryption Key = ";
-                cin >> enc_key;
-                aes_cpu->set_key(enc_key, aes_cpu->aes_encryption_key, &aes_cpu->expanded_key_length);
+                cin >> user_key;
+                enc_key = set_key(user_key);
 
-                aes_cpu->encrypt(argv[2], aes_cpu->aes_block_array, aes_cpu->aes_encryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
-                if (DEBUG)
-                    cout << endl << "Time required for AES 128-bit Encryption : " << aes_cpu->aes_cpu_encryption_time << " ms " << endl;
-                else
-                    aes_cpu->logger->print_log("Time required for AES 128-bit Encryption : %f", aes_cpu->aes_cpu_encryption_time, " ms ");
-                
-                aes_cpu->uninitialize(aes_cpu);
+                iv = generate_iv(IV_LENGTH);
 
+                vector<byte_arr_t> encrypted_data = aes_cpu_cipher(file_data, enc_key, iv);
+
+                write_encrypted_data(encrypted_data, enc_key, output_file);
+            }
             break;
 
-            // case 2:
+            case 2:
+            {
+                // Variable Declarations
+                string user_key, file_key;
+                byte_arr_t enc_key, dec_key, iv;
+                string input_file, output_file, output_file_name;
 
-            //     cout << endl << "Enter Decryption Key = ";
-            //     cin >> dec_key;
+                input_file = argv[2];
+                // output_file_name = filesystem::path(input_file).filename();
+                // output_file = output_file_name - ".enc";
 
-            //     aes_cpu->verify_key(enc_key, dec_key);
+                cout << endl << "Enter Decryption Key = ";
+                cin >> user_key;
+                dec_key = set_key(user_key);
 
-            //     aes_cpu->set_key(enc_key, aes_cpu->aes_decryption_key, &aes_cpu->expanded_key_length);
+                file_key = get_key(input_file);
+                verify_key(file_key, dec_key.data());
 
-            //     aes_cpu->decrypt(argv[3], aes_cpu->aes_block_array, aes_cpu->aes_decryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
-            //     if (DEBUG)
-            //         cout << endl << "Time required for AES 128-bit Decryption : " << aes_cpu->aes_cpu_decryption_time << " ms " << endl;
-            //     else
-            //         aes_cpu->logger->print_log("Time required for AES 128-bit Decryption : %f", aes_cpu->aes_cpu_decryption_time, " ms ");
+                iv = generate_iv(IV_LENGTH);
 
-            //     aes_cpu->uninitialize(aes_cpu);
+                // vector<byte_arr_t> encrypted_data = aes_cpu_cipher(file_data, enc_key, iv);
 
-            // break;
+                // write_encrypted_data(encrypted_data, enc_key, output_file);
+
+                // aes_cpu->decrypt(argv[3], aes_cpu->aes_block_array, aes_cpu->aes_decryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
+                // if (DEBUG)
+                //     cout << endl << "Time required for AES 128-bit Decryption : " << aes_cpu->aes_cpu_decryption_time << " ms " << endl;
+                // elses
+                //     aes_cpu->logger->print_log("Time required for AES 128-bit Decryption : %f", aes_cpu->aes_cpu_decryption_time, " ms ");
+            }
+            break;
 
             case 3:
                 cout << endl << "Exiting !!!" << endl;
                 exit(AES_SUCCESS);
             break;
+
+            default:
+                cerr << endl << "Error: Please Choose Between Options 1-3 ... Exiting !!!" << endl;
+                exit(AES_FAILURE);
+            break;
         }
 
         cout << "--------------------------------------------------------------------" << endl;
     }
-
-    delete aes_cpu;
-    aes_cpu = nullptr;
 
     return AES_SUCCESS;
 }

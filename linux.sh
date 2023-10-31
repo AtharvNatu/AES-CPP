@@ -2,13 +2,16 @@ clear
 
 cd ./bin
 
-g++ -std=c++20 -o AES ../test/*.cpp ../src/CPU/*.cpp 
+echo "Compiling Source Files ... "
+g++ -Wall -std=c++20 -o AES ../test/*.cpp ../src/CPU/*.cpp -fopenmp
 
 cp AES ../
 
 cd ..
 
-./AES data/Test.txt data/ENC_FILE data/DEC_FILE
+./AES data/Novel.txt Novel.txt.enc
+
+# ./AES data/Test.txt Test.txt.enc
 
 # ./AES data/win.pdf data/ENC_FILE data/DEC_FILE
 
