@@ -206,70 +206,6 @@ void aes_cpu_mix_columns_inverse(void)
 	}
 }
 
-string cipher(int offset, char input_data[4][4], int file_size)
-{
-	// Variable Declarations
-	int round = 0;
-    char *output_data = NULL;
-    string ret;
-
-    int mem_size = file_size;
-
-    output_data = (char*)malloc(mem_size * sizeof(char));
-    if (output_data == NULL)
-    {
-        cerr << endl << "Failed to allocate memory to output_data !!!" << endl;
-        exit(AES_FAILURE);
-    }
-
-	// Copy plaintext to (*state) array
-	for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
-        {
-            (*state)[i][j] = input_data[i][j];
-        }
-	}
-
-	// Key Addition Prior to Round 1 (R0)
-	aes_cpu_add_round_key(0);
-	// round = 1;
-
-	// Round 1 (R1) to AES_ROUNDS - 1 (R9)
-    for (round = 1; round < AES_ROUNDS; round++)
-    {
-        aes_cpu_byte_sub();
-        aes_cpu_shift_rows();
-        aes_cpu_mix_columns();
-        aes_cpu_add_round_key(round);
-    }
-
-	// Final Round Without Column Mixing
-	// round = AES_ROUNDS;
-	aes_cpu_byte_sub();
-	aes_cpu_shift_rows();
-	aes_cpu_add_round_key(AES_ROUNDS);
-
-	// Copy (*state) array to output array
-	for (int i = 0; i < 4; i++)
-	{
-		for (int j = 0; j < 4; j++)
-        {
-            output_data[offset + i * 4 + j] = (*state)[i][j];
-        }
-	}
-
-    for (int i = 0; i < mem_size; i++)
-        ret.push_back(output_data[i]);
-
-    write_file("Novel.txt.enc", ret);
-
-    free(output_data);
-    output_data = NULL;
-
-    return ret;
-}
-
 static void copy_block(unsigned char *input, unsigned char* output)
 {
     // Code
@@ -343,5 +279,7 @@ void aes_cpu_decrypt(byte_t* input, const byte_t* round_key, byte_t* output)
 
     decipher();
 }
+
+
 
 

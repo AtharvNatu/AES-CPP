@@ -13,11 +13,8 @@ using namespace std;
 #if defined (_WIN32) || defined (_WIN64) || defined (WIN32) || defined (WIN64)
     #include <stdint.h>
 #elif defined(__linux)
-    
     #include <sys/types.h>
-
     typedef u_int32_t uint32_t;
-
 #endif
 
 typedef struct 
@@ -29,7 +26,7 @@ typedef struct
 
 } SHA256_CONTEXT;
 
-typedef int status_t;
+typedef int sha_status_t;
 
 // Function Declarations
 
@@ -41,7 +38,7 @@ void sha256_init(SHA256_CONTEXT *handle);
 /// @param handle 
 /// @param input_buffer 
 /// @param input_buffer_length 
-status_t sha256_write(SHA256_CONTEXT *handle, unsigned char *input_buffer, size_t input_buffer_length);
+sha_status_t sha256_write(SHA256_CONTEXT *handle, unsigned char *input_buffer, size_t input_buffer_length);
 
 
 /// @brief Reads the content of the hash computed with the given context

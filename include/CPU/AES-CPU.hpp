@@ -1,11 +1,14 @@
 #pragma once
 
+#if defined (_WIN32) || defined (_WIN64) || defined (WIN32) || defined (WIN64)
+    #include <windows.h>
+#endif
+
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 
 #include "../Common/Helper.hpp"
-#include "../Common/Logger.hpp"
 
 #ifndef _HELPER_TIMER_H
     #define _HELPER_TIMER_H
@@ -36,7 +39,6 @@ byte_t xtime(byte_t x);
 byte_t multiply(byte_t x, byte_t y);
 
 // AES Encryption and Decryption Algorithm Implementations
-string cipher(int offset, char input_data[4][4], int file_size);
 void cipher(void);
 void decipher(void);
 
@@ -44,5 +46,5 @@ void aes_cpu_encrypt(byte_t* input, const byte_t* round_key, byte_t* output);
 void aes_cpu_decrypt(byte_t* input, const byte_t* round_key, byte_t* output);
 
 // Library Export Wrappers
-double aes_cpu_encrypt(const char *input_file, unsigned char **key, char **data);
+double aes_cpu_encrypt(const char *input_file, unsigned char *key, char *data);
 double aes_cpu_decrypt(const char *input_file_name);

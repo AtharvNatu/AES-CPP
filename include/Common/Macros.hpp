@@ -17,6 +17,7 @@ using namespace std;
 #define AES_STATE_SIDE  4
 #define AES_SUCCESS     EXIT_SUCCESS
 #define AES_FAILURE     EXIT_FAILURE
+#define AES_FILE        "444341455547"
 
 #if defined (_WIN32) || defined (_WIN64) || defined (WIN32) || defined (WIN64)
     #define OS 1
@@ -26,5 +27,6 @@ using namespace std;
 
 // Typedefs
 typedef unsigned char byte_t;
+typedef bool status_t;
 typedef byte_t state_t[4][4];
 

@@ -9,9 +9,9 @@ cp AES ../
 
 cd ..
 
-./AES data/Novel.txt data/ENC/Novel.txt.enc data/DEC/Novel.txt
+./AES data/Novel.txt Novel.txt.enc
 
-# ./AES data/win.pdf win.pdf.enc decWin.pdf
+# ./AES data/win.pdf win.pdf.enc 
 
 # ./AES data/Sample.txt Sample.txt.enc
                                                                   

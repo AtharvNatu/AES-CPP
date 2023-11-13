@@ -106,7 +106,7 @@ static void transform(SHA256_CONTEXT *handle, unsigned char *data)
 	handle->h7 += h;
 }
 
-status_t sha256_write(SHA256_CONTEXT *handle, unsigned char *input_buffer, size_t input_buffer_length)
+sha_status_t sha256_write(SHA256_CONTEXT *handle, unsigned char *input_buffer, size_t input_buffer_length)
 {
     // Code
 
