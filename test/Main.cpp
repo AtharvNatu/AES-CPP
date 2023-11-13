@@ -1,7 +1,22 @@
 #include "../include/CPU/AES-CPU.hpp"
+#include <vector>
 
-int main(int argc, char** argv)
-{ 
+byte_t *hash_password(const char *password, size_t size)
+{
+    byte_t *hash = (byte_t*)malloc(size * sizeof(byte_t));
+
+    SHA256_CONTEXT context;
+    sha256_init(&context);
+    sha256_write(&context, (byte_t *)password, strlen(password));
+    sha256_final(&context);
+
+    memcpy(hash, sha256_read(&context), size);
+
+    return hash;
+}
+
+int main(int argc, char **argv)
+{
     int choice = -1;
 
     // Code
@@ -18,24 +33,79 @@ int main(int argc, char** argv)
             {
                 // Variable Declarations
                 string user_key, file_key;
-                byte_arr_t enc_key, dec_key, iv;
                 string input_file, output_file, output_file_name;
+                string file_data;
+                byte_t *plaintext = NULL;
+                byte_t ciphertext_block[AES_BLOCK_SIZE];
+                byte_t *ciphertext = NULL;
+                byte_t round_key[176];
 
+                // Reading input and output file paths
                 input_file = argv[1];
                 output_file_name = filesystem::path(input_file).filename();
                 output_file = output_file_name + ".enc";
 
-                vector<byte_arr_t> file_data = read_data_file(argv[1]);
+                // Allocate memory to input buffer
+                int file_length = filesystem::file_size(input_file);
+                plaintext = (byte_t *)malloc(sizeof(byte_t) * file_length);
+                if (plaintext == NULL)
+                {
+                    cerr << endl << "Error :  Failed To Allocate Memory To Input File Buffer ... Exiting !!!" << endl;
+                    exit(AES_FAILURE);
+                }
 
+                uintmax_t bytes_read = read_file(input_file.c_str(), plaintext, file_length);
+                cout << endl << bytes_read << " Bytes Read From File " << input_file << endl;
+
+                uintmax_t ciphertext_blocks = (bytes_read + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE;
+                ciphertext = (byte_t*)malloc(ciphertext_blocks * AES_BLOCK_SIZE);
+                if (ciphertext == NULL)
+                {
+                    cerr << endl << "Error :  Failed To Allocate Memory To Output File Buffer ciphertext ... Exiting !!!" << endl;
+                    exit(AES_FAILURE);
+                }
+            
                 cout << endl << "Enter Encryption Key = ";
                 cin >> user_key;
-                enc_key = set_key(user_key);
 
-                iv = generate_iv(IV_LENGTH);
+                unsigned char *key = hash_password(user_key.c_str(), AES_LENGTH);
 
-                vector<byte_arr_t> encrypted_data = aes_cpu_cipher(file_data, enc_key, iv);
+                cout << endl << "Key (" << user_key.length() << ") ";
+                for (size_t i = 0; i < user_key.length(); ++i)
+                    printf("%X ", (unsigned char)user_key[i]);
+                printf("\n");
 
-                write_encrypted_data(encrypted_data, enc_key, output_file);
+                cout << endl << "Key Hash (" << user_key.length() << ") ";
+                for (size_t i = 0; i < AES_LENGTH; ++i)
+                    printf("%X ", key[i]);
+                printf("\n");
+
+                aes_cpu_expand_key(round_key, key);
+
+                StopWatchInterface *timer = NULL;
+                sdkCreateTimer(&timer);
+                sdkStartTimer(&timer);
+                for (uintmax_t i = 0; i < ciphertext_blocks; i++)
+                {
+                    aes_cpu_encrypt(plaintext + i * AES_BLOCK_SIZE, round_key, ciphertext_block);
+
+                    memcpy(ciphertext + i * AES_BLOCK_SIZE, ciphertext_block, sizeof(byte_t) * AES_BLOCK_SIZE);
+                }
+                sdkStopTimer(&timer);
+                cout << endl << "Time taken to Encrypt : " << sdkGetTimerValue(&timer) / 1000.0f << " seconds" << endl;
+
+                size_t bytes_written = write_file(argv[2], ciphertext, AES_BLOCK_SIZE * ciphertext_blocks);
+                cout << endl << bytes_written << " Bytes Written To File " << argv[2] << endl;
+
+                sdkDeleteTimer(&timer);
+                timer = NULL;
+
+                free(plaintext);
+                plaintext = NULL;
+
+                free(key);
+                key = NULL;
+
             }
             break;
 
@@ -43,31 +113,79 @@ int main(int argc, char** argv)
             {
                 // Variable Declarations
                 string user_key, file_key;
-                byte_arr_t enc_key, dec_key, iv;
                 string input_file, output_file, output_file_name;
+                string file_data;
+                byte_t *plaintext = NULL;
+                byte_t plaintext_block[AES_BLOCK_SIZE];
+                byte_t *ciphertext = NULL;
+                byte_t round_key[176];
 
+                // Reading input and output file paths
                 input_file = argv[2];
                 // output_file_name = filesystem::path(input_file).filename();
-                // output_file = output_file_name - ".enc";
+                // output_file = output_file_name + ".enc";
 
-                cout << endl << "Enter Decryption Key = ";
+                // Allocate memory to input buffer
+                int file_length = filesystem::file_size(input_file);
+                ciphertext = (byte_t *)malloc(sizeof(byte_t) * file_length);
+                if (ciphertext == NULL)
+                {
+                    cerr << endl << "Error :  Failed To Allocate Memory To Input File Buffer ... Exiting !!!" << endl;
+                    exit(AES_FAILURE);
+                }
+
+                uintmax_t bytes_read = read_file(input_file.c_str(), ciphertext, file_length);
+                cout << endl << bytes_read << " Bytes Read From File " << input_file << endl;
+
+                uintmax_t ciphertext_blocks = (bytes_read + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE;
+                plaintext = (byte_t*)malloc(ciphertext_blocks * AES_BLOCK_SIZE);
+                if (plaintext == NULL)
+                {
+                    cerr << endl << "Error :  Failed To Allocate Memory To Output File Buffer plaintext ... Exiting !!!" << endl;
+                    exit(AES_FAILURE);
+                }
+            
+                cout << endl << "Enter Encryption Key = ";
                 cin >> user_key;
-                dec_key = set_key(user_key);
 
-                file_key = get_key(input_file);
-                verify_key(file_key, dec_key.data());
+                unsigned char *key = hash_password(user_key.c_str(), AES_LENGTH);
 
-                iv = generate_iv(IV_LENGTH);
+                cout << endl << "Key (" << user_key.length() << ") ";
+                for (size_t i = 0; i < user_key.length(); ++i)
+                    printf("%X ", (unsigned char)user_key[i]);
+                printf("\n");
 
-                // vector<byte_arr_t> encrypted_data = aes_cpu_cipher(file_data, enc_key, iv);
+                cout << endl << "Key Hash (" << user_key.length() << ") ";
+                for (size_t i = 0; i < AES_LENGTH; ++i)
+                    printf("%X ", key[i]);
+                printf("\n");
 
-                // write_encrypted_data(encrypted_data, enc_key, output_file);
+                aes_cpu_expand_key(round_key, key);
 
-                // aes_cpu->decrypt(argv[3], aes_cpu->aes_block_array, aes_cpu->aes_decryption_key, aes_cpu->expanded_key_length, aes_cpu->block_number);
-                // if (DEBUG)
-                //     cout << endl << "Time required for AES 128-bit Decryption : " << aes_cpu->aes_cpu_decryption_time << " ms " << endl;
-                // elses
-                //     aes_cpu->logger->print_log("Time required for AES 128-bit Decryption : %f", aes_cpu->aes_cpu_decryption_time, " ms ");
+                StopWatchInterface *timer = NULL;
+                sdkCreateTimer(&timer);
+                sdkStartTimer(&timer);
+                for (uintmax_t i = 0; i < ciphertext_blocks; i++)
+                {
+                    aes_cpu_decrypt(ciphertext + i * AES_BLOCK_SIZE, round_key, plaintext_block);
+
+                    memcpy(plaintext + i * AES_BLOCK_SIZE, plaintext_block, sizeof(byte_t) * AES_BLOCK_SIZE);
+                }
+                sdkStopTimer(&timer);
+                cout << endl << "Time taken to Decrypt : " << sdkGetTimerValue(&timer) / 1000.0f << " seconds" << endl;
+
+                size_t bytes_written = write_file(argv[3], plaintext, AES_BLOCK_SIZE * ciphertext_blocks);
+                cout << endl << bytes_written << " Bytes Written To File " << argv[3] << endl;
+
+                sdkDeleteTimer(&timer);
+                timer = NULL;
+
+                free(plaintext);
+                plaintext = NULL;
+
+                free(key);
+                key = NULL;
+
             }
             break;
 

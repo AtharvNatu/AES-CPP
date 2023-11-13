@@ -4,7 +4,6 @@
 #include <cstring>
 #include <filesystem>
 
-#include "../Common/Tables.hpp"
 #include "../Common/Helper.hpp"
 #include "../Common/Logger.hpp"
 
@@ -15,55 +14,35 @@
 
 // Function Prototypes
 
-// Key Schedule Functions
-void aes_cpu_key_schedule(const byte_arr_t &key);
-byte_arr_t aes_cpu_sub_key(byte_arr_t &prev_sub_key, const int rounds);
+// Key Related Functions
+void aes_cpu_expand_key(byte_t *round_key, byte_t *key);
+void aes_cpu_add_round_key(byte_t round);
 
 // AES Operations
 // -> Byte Substitution
 // -> Shifting Rows
 // -> Mixing Columns
 // -> Adding Round Key
-void aes_cpu_byte_sub(byte_arr_t &data);
-void aes_cpu_byte_sub_inverse(byte_arr_t &data);
+void aes_cpu_byte_sub(void);
+void aes_cpu_byte_sub_inverse(void);
 
-void aes_cpu_shift_rows(byte_arr_t &data);
-void aes_cpu_shift_rows_inverse(byte_arr_t &data);
+void aes_cpu_shift_rows(void);
+void aes_cpu_shift_rows_inverse(void);
 
-void aes_cpu_mix_columns(byte_arr_t &data);
-void aes_cpu_mix_columns_inverse(byte_arr_t &data);
+void aes_cpu_mix_columns(void);
+void aes_cpu_mix_columns_inverse(void);
 
-void aes_cpu_add_round_key(byte_arr_t &data, const int round_key);
+byte_t xtime(byte_t x);
+byte_t multiply(byte_t x, byte_t y);
 
 // AES Encryption and Decryption Algorithm Implementations
-byte_arr_t aes_cpu_encrypt_data(const byte_arr_t &data);
-byte_arr_t aes_cpu_decrypt_data(const byte_arr_t &data);
+string cipher(int offset, char input_data[4][4], int file_size);
+void cipher(void);
+void decipher(void);
 
-// AES Encryption and Decryption Wrapper Functions
-const vector<byte_arr_t> aes_cpu_cipher(
-    const vector<byte_arr_t> &data,
-    const byte_arr_t &key,
-    const byte_arr_t &iv
-);
-
-const vector<byte_arr_t> aes_cpu_decipher(
-    const vector<byte_arr_t> &data,
-    const byte_arr_t &key,
-    const byte_arr_t &iv
-);
-
-const vector<byte_arr_t> aes_cpu_cipher_omp(
-    const vector<byte_arr_t> &data,
-    const byte_arr_t &key,
-    const byte_arr_t &iv
-);
-
-const vector<byte_arr_t> aes_cpu_decipher_omp(
-    const vector<byte_arr_t> &data,
-    const byte_arr_t &key,
-    const byte_arr_t &iv
-);
+void aes_cpu_encrypt(byte_t* input, const byte_t* round_key, byte_t* output);
+void aes_cpu_decrypt(byte_t* input, const byte_t* round_key, byte_t* output);
 
 // Library Export Wrappers
-double aes_cpu_encrypt(const char *input_file_name);
+double aes_cpu_encrypt(const char *input_file, unsigned char **key, char **data);
 double aes_cpu_decrypt(const char *input_file_name);

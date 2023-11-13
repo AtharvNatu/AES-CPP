@@ -1,253 +1,347 @@
 #include "../../include/CPU/AES-CPU.hpp"
+#include "../../include/Common/Tables.hpp"
 
 // Global Variables
-byte_arr_t aes_key;
-vector<byte_arr_t> aes_sub_keys(SUB_KEYS);
+state_t *state;
+const byte_t *aes_round_key;
+
 StopWatchInterface *aes_cpu_timer = nullptr;
 float aes_cpu_encryption_time = 0.0, aes_cpu_decryption_time = 0.0;
 
 // Function Definitions
-void aes_cpu_key_schedule(const byte_arr_t &key)
+byte_t xtime(byte_t x)
 {
-    // Code
-    for (int i = 0; i < SUB_KEYS; i++)
-    {
-        if (i == 0)
-            aes_sub_keys[i] = key;
-        else
-            aes_sub_keys[i] = aes_cpu_sub_key(aes_sub_keys[i - 1], i - 1);
-    }
+	return ((x << 1) ^ (((x >> 7) & 1) * 0x1b));
 }
 
-byte_arr_t aes_cpu_sub_key(byte_arr_t &prev_sub_key, const int rounds)
+byte_t multiply(byte_t x, byte_t y)
 {
-    // Variable Declarations
-    byte_arr_t result(AES_LENGTH);
-
-    // Code
-    result[0] = (prev_sub_key[0] ^ (sbox[prev_sub_key[13]] ^ round_constant[rounds]));
-    result[1] = (prev_sub_key[1] ^ sbox[prev_sub_key[14]]);
-    result[2] = (prev_sub_key[2] ^ sbox[prev_sub_key[15]]);
-    result[3] = (prev_sub_key[3] ^ sbox[prev_sub_key[12]]);
-
-    for (int i = 4; i < AES_LENGTH; i += 4)
-    {
-        result[i + 0] = (result[i - 4] ^ prev_sub_key[i + 0]);
-        result[i + 1] = (result[i - 3] ^ prev_sub_key[i + 1]);
-        result[i + 2] = (result[i - 2] ^ prev_sub_key[i + 2]);
-        result[i + 3] = (result[i - 1] ^ prev_sub_key[i + 3]);
-    }
-
-    return result;
+    return (((y & 1) * x) ^
+		((y >> 1 & 1) * xtime(x)) ^
+		((y >> 2 & 1) * xtime(xtime(x))) ^
+		((y >> 3 & 1) * xtime(xtime(xtime(x)))) ^
+		((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))));
 }
 
-void aes_cpu_byte_sub(byte_arr_t &data)
-{
-    // Code
-    for (int i = 0; i < AES_LENGTH; i++)
-        data[i] = sbox[data[i]];
-}
-
-void aes_cpu_byte_sub_inverse(byte_arr_t &data)
-{
-    // Code
-    for (int i = 0; i < AES_LENGTH; i++)
-        data[i] = sbox_inverse[data[i]];
-}
-
-void aes_cpu_shift_rows(byte_arr_t &data)
-{
-    // Code
-    unsigned char aux_array[4];
-
-    for (int i = 1; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-            aux_array[j] = data[i + 4 * j];
-
-        for (int j = 0; j < 4; j++)
-            data[i + 4 * j] = aux_array[(j + i) % 4];
-    }
-}
-
-void aes_cpu_shift_rows_inverse(byte_arr_t &data)
-{
-    // Code
-    unsigned char aux_array[4];
-
-    for (int i = 1; i < 4; i++)
-    {
-        for (int j = 0; j < 4; j++)
-            aux_array[j] = data[i + 4 * j];
-
-        for (int j = 0; j < 4; j++)
-            data[i + 4 * j] = aux_array[(j + 4 - i) % 4];
-    }
-}
-
-void aes_cpu_mix_columns(byte_arr_t &data)
-{
-    // Code
-    for (int i = 0; i < AES_LENGTH; i += 4)
-    {
-        unsigned char b0 = data[i + 0];
-        unsigned char b1 = data[i + 1];
-        unsigned char b2 = data[i + 2];
-        unsigned char b3 = data[i + 3];
-
-        data[i + 0] = mul[b0][0] ^ mul[b1][1] ^ b2 ^ b3;
-        data[i + 1] = b0 ^ mul[b1][0] ^ mul[b2][1] ^ b3;
-        data[i + 2] = b0 ^ b1 ^ mul[b2][0] ^ mul[b3][1];
-        data[i + 3] = mul[b0][1] ^ b1 ^ b2 ^ mul[b3][0];
-    }
-}
-
-void aes_cpu_mix_columns_inverse(byte_arr_t &data)
-{
-    // Code
-    for (int i = 0; i < AES_LENGTH; i += 4)
-    {
-        unsigned char c0 = data[i + 0];
-        unsigned char c1 = data[i + 1];
-        unsigned char c2 = data[i + 2];
-        unsigned char c3 = data[i + 3];
-
-        data[i + 0] = mul[c0][5] ^ mul[c1][3] ^ mul[c2][4] ^ mul[c3][2];
-        data[i + 1] = mul[c0][2] ^ mul[c1][5] ^ mul[c2][3] ^ mul[c3][4];
-        data[i + 2] = mul[c0][4] ^ mul[c1][2] ^ mul[c2][5] ^ mul[c3][3];
-        data[i + 3] = mul[c0][3] ^ mul[c1][4] ^ mul[c2][2] ^ mul[c3][5];
-    }
-}
-
-void aes_cpu_add_round_key(byte_arr_t &data, const int round_key)
-{
-    // Code
-    XOR(data, aes_sub_keys[round_key], AES_LENGTH);
-}
-
-byte_arr_t aes_cpu_encrypt_data(const byte_arr_t &data)
-{
-    // Variable Declarations
-    int round = 0;
-    byte_arr_t enc_data = data;
-
-    // Code
-
-    // Key Addition Prior to Round 1 (R0)
-    aes_cpu_add_round_key(enc_data, round);
-    round = 1;
-
-    // Round 1 (R1) to AES_ROUNDS - 1 (R9)
-    for (round = 1; round < AES_ROUNDS; round++)
-    {
-        aes_cpu_byte_sub(enc_data);
-        aes_cpu_shift_rows(enc_data);
-        aes_cpu_mix_columns(enc_data);
-        aes_cpu_add_round_key(enc_data, round);
-    }
-
-    // Final Round Without Column Mixing
-    round = AES_ROUNDS;
-    aes_cpu_byte_sub(enc_data);
-    aes_cpu_shift_rows(enc_data);
-    aes_cpu_add_round_key(enc_data, round);
-
-    return enc_data;
-}
-
-byte_arr_t aes_cpu_decrypt_data(const byte_arr_t &data)
+void aes_cpu_expand_key(byte_t *round_key, byte_t *key)
 {
     // Variable Declrations
-    int round = AES_ROUNDS;
-    byte_arr_t dec_data = data;
+    unsigned char aux[4], k;
+    size_t i, j;
 
     // Code
 
-    // Key Addition before Round
-    aes_cpu_add_round_key(dec_data, round);
-    aes_cpu_shift_rows_inverse(dec_data);
-    aes_cpu_byte_sub_inverse(dec_data);
-    aes_cpu_byte_sub_inverse(dec_data);
-    round = AES_ROUNDS - 1;
-
-    // Round AES_ROUNDS - 1 (R9) to 1 (R1)
-    for (round = 9; round > 0; round--)
+    // 1st round is the key itself
+    for (i = 0; i < AES_COLS; i++)
     {
-        aes_cpu_add_round_key(dec_data, round);
-        aes_cpu_mix_columns_inverse(dec_data);
-        aes_cpu_shift_rows_inverse(dec_data);
-        aes_cpu_byte_sub_inverse(dec_data);
+        round_key[(i * 4) + 0] = key[(i * 4) + 0];
+        round_key[(i * 4) + 1] = key[(i * 4) + 1];
+        round_key[(i * 4) + 2] = key[(i * 4) + 2];
+        round_key[(i * 4) + 3] = key[(i * 4) + 3];
     }
 
-    // Final Round without Column Mixing (R0)
-    round = 0;
-    aes_cpu_add_round_key(dec_data, round);
+    // All other round keys are derived from previous round keys
+    while (i < (AES_COLS * (AES_ROUNDS + 1)))
+    {
+        for (j = 0; j < 4; j++)
+            aux[j] = round_key[(i - 1) * AES_COLS + j];
+        
+        if (i % AES_COLS == 0)
+        {
+            // Rotate Word
+            k = aux[0];
+            aux[0] = aux[1];
+            aux[1] = aux[2];
+            aux[2] = aux[3];
+            aux[3] = k;
 
-    return dec_data;
+            // Substitute
+            aux[0] = sbox[aux[0]];
+            aux[1] = sbox[aux[1]];
+            aux[2] = sbox[aux[2]];
+            aux[3] = sbox[aux[3]];
+
+            aux[0] = aux[0] ^ round_constants[i / AES_COLS];
+        }
+
+        round_key[i * 4 + 0] = round_key[(i - AES_COLS) * 4 + 0] ^ aux[0];
+        round_key[i * 4 + 1] = round_key[(i - AES_COLS) * 4 + 1] ^ aux[1];
+        round_key[i * 4 + 2] = round_key[(i - AES_COLS) * 4 + 2] ^ aux[2];
+        round_key[i * 4 + 3] = round_key[(i - AES_COLS) * 4 + 3] ^ aux[3];
+
+        i++;
+    }
 }
 
-const vector<byte_arr_t> aes_cpu_cipher(
-    const vector<byte_arr_t> &data,
-    const byte_arr_t &key,
-    const byte_arr_t &iv)
+void aes_cpu_add_round_key(byte_t round)
+{
+	// Code
+    for (byte_t i = 0; i < 4; i++)
+    {
+        for (byte_t j = 0; j < 4; j++)
+            (*state)[i][j] ^= aes_round_key[round * AES_COLS * 4 + i * AES_COLS + j];
+    }
+}
+
+void aes_cpu_byte_sub(void)
 {
     // Code
-    aes_cpu_key_schedule(key);
-
-    vector<byte_arr_t> ciphertext(data.size(), vector<unsigned char>(AES_LENGTH, 0x00));
-    vector<byte_arr_t> counters(data.size(), vector<unsigned char>(AES_LENGTH, 0x00));
-
-    generate_counters(counters, iv);
-
-    sdkCreateTimer(&aes_cpu_timer);
-    sdkStartTimer(&aes_cpu_timer);
-    for (int i = 0; i < AES_ROUNDS; i++)
+    for (byte_t i = 0; i < 4; i++)
     {
-        for (size_t j = 0; j < data.size(); j++)
-            ciphertext[j] = XOR(aes_cpu_encrypt_data(counters[j]), data[j]);
+        for (byte_t j = 0; j < 4; j++)
+            (*state)[j][i] = sbox[(*state)[j][i]];
     }
-    sdkStopTimer(&aes_cpu_timer);
-    aes_cpu_encryption_time = sdkGetTimerValue(&aes_cpu_timer);
-    if (aes_cpu_timer)
-    {   
-        sdkDeleteTimer(&aes_cpu_timer);
-        aes_cpu_timer = nullptr;
-    }
-
-    cout << endl << "Time For Encryption : " << aes_cpu_encryption_time / 1000.0f << " seconds" << endl;
-
-    return ciphertext;
 }
 
-const vector<byte_arr_t> aes_cpu_decipher(
-    const vector<byte_arr_t> &data,
-    const byte_arr_t &key,
-    const byte_arr_t &iv)
+void aes_cpu_byte_sub_inverse(void)
 {
     // Code
-    aes_cpu_key_schedule(key);
-
-    vector<byte_arr_t> plaintext(data.size(), vector<unsigned char>(AES_LENGTH, 0x00));
-    vector<byte_arr_t> counters(data.size(), vector<unsigned char>(AES_LENGTH, 0x00));
-
-    generate_counters(counters, iv);
-
-    sdkCreateTimer(&aes_cpu_timer);
-    sdkStartTimer(&aes_cpu_timer);
-    for (int i = 0; i < AES_ROUNDS; i++)
+    for (byte_t i = 0; i < 4; i++)
     {
-        for (size_t j = 0; j < data.size(); j++)
-            plaintext[j] = XOR(aes_cpu_encrypt_data(counters[j]), data[j]);
+        for (byte_t j = 0; j < 4; j++)
+            (*state)[j][i] = sbox_inverse[(*state)[j][i]];
     }
-    sdkStopTimer(&aes_cpu_timer);
-    aes_cpu_encryption_time = sdkGetTimerValue(&aes_cpu_timer);
-    if (aes_cpu_timer)
-    {   
-        sdkDeleteTimer(&aes_cpu_timer);
-        aes_cpu_timer = nullptr;
-    }
-
-    cout << endl << "Time For Decryption : " << aes_cpu_decryption_time << endl;
-
-    return plaintext;
 }
+
+void aes_cpu_shift_rows(void)
+{
+    // Code
+    byte_t temp;
+
+    temp           = (*state)[0][1];
+	(*state)[0][1] = (*state)[1][1];
+	(*state)[1][1] = (*state)[2][1];
+	(*state)[2][1] = (*state)[3][1];
+	(*state)[3][1] = temp;
+
+	temp           = (*state)[0][2];
+	(*state)[0][2] = (*state)[2][2];
+	(*state)[2][2] = temp;
+
+	temp           = (*state)[1][2];
+	(*state)[1][2] = (*state)[3][2];
+	(*state)[3][2] = temp;
+
+	temp           = (*state)[0][3];
+	(*state)[0][3] = (*state)[3][3];
+	(*state)[3][3] = (*state)[2][3];
+	(*state)[2][3] = (*state)[1][3];
+	(*state)[1][3] = temp;
+}
+
+void aes_cpu_shift_rows_inverse(void)
+{
+    // Code
+    byte_t temp;
+
+    // Inverse row shift operation
+    temp           = (*state)[3][1];
+    (*state)[3][1] = (*state)[2][1];
+    (*state)[2][1] = (*state)[1][1];
+    (*state)[1][1] = (*state)[0][1];
+    (*state)[0][1] = temp;
+
+    temp           = (*state)[0][2];
+    (*state)[0][2] = (*state)[2][2];
+    (*state)[2][2] = temp;
+
+    temp           = (*state)[1][2];
+    (*state)[1][2] = (*state)[3][2];
+    (*state)[3][2] = temp;
+
+    temp           = (*state)[0][3];
+    (*state)[0][3] = (*state)[1][3];
+    (*state)[1][3] = (*state)[2][3];
+    (*state)[2][3] = (*state)[3][3];
+    (*state)[3][3] = temp;
+}
+
+void aes_cpu_mix_columns(void)
+{
+    // Variable Declarations
+    unsigned char tmp, tm, t;
+
+    // Code
+    for (int i = 0; i < 4; i++)
+    {
+        t = (*state)[i][0];
+		tmp = (*state)[i][0] ^ (*state)[i][1] ^ (*state)[i][2] ^ (*state)[i][3];
+		
+        tm = (*state)[i][0] ^ (*state)[i][1]; 
+        tm = xtime(tm);  
+        (*state)[i][0] ^= tm ^ tmp;
+
+		tm = (*state)[i][1] ^ (*state)[i][2]; 
+        tm = xtime(tm);  
+        (*state)[i][1] ^= tm ^ tmp;
+
+		tm = (*state)[i][2] ^ (*state)[i][3]; 
+        tm = xtime(tm);  
+        (*state)[i][2] ^= tm ^ tmp;
+
+		tm = (*state)[i][3] ^ t;                
+        tm = xtime(tm);  
+        (*state)[i][3] ^= tm ^ tmp;
+    }
+}
+
+void aes_cpu_mix_columns_inverse(void)
+{
+    // Variable Declarations
+    int i;
+	unsigned char a, b, c, d;
+
+    // Code
+	for (i = 0; i < 4; i++) 
+    {
+		a = (*state)[i][0];
+		b = (*state)[i][1];
+		c = (*state)[i][2];
+		d = (*state)[i][3];
+
+		(*state)[i][0] = multiply(a, 0x0e) ^ multiply(b, 0x0b) ^ multiply(c, 0x0d) ^ multiply(d, 0x09);
+		(*state)[i][1] = multiply(a, 0x09) ^ multiply(b, 0x0e) ^ multiply(c, 0x0b) ^ multiply(d, 0x0d);
+		(*state)[i][2] = multiply(a, 0x0d) ^ multiply(b, 0x09) ^ multiply(c, 0x0e) ^ multiply(d, 0x0b);
+		(*state)[i][3] = multiply(a, 0x0b) ^ multiply(b, 0x0d) ^ multiply(c, 0x09) ^ multiply(d, 0x0e);
+	}
+}
+
+string cipher(int offset, char input_data[4][4], int file_size)
+{
+	// Variable Declarations
+	int round = 0;
+    char *output_data = NULL;
+    string ret;
+
+    int mem_size = file_size;
+
+    output_data = (char*)malloc(mem_size * sizeof(char));
+    if (output_data == NULL)
+    {
+        cerr << endl << "Failed to allocate memory to output_data !!!" << endl;
+        exit(AES_FAILURE);
+    }
+
+	// Copy plaintext to (*state) array
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+        {
+            (*state)[i][j] = input_data[i][j];
+        }
+	}
+
+	// Key Addition Prior to Round 1 (R0)
+	aes_cpu_add_round_key(0);
+	// round = 1;
+
+	// Round 1 (R1) to AES_ROUNDS - 1 (R9)
+    for (round = 1; round < AES_ROUNDS; round++)
+    {
+        aes_cpu_byte_sub();
+        aes_cpu_shift_rows();
+        aes_cpu_mix_columns();
+        aes_cpu_add_round_key(round);
+    }
+
+	// Final Round Without Column Mixing
+	// round = AES_ROUNDS;
+	aes_cpu_byte_sub();
+	aes_cpu_shift_rows();
+	aes_cpu_add_round_key(AES_ROUNDS);
+
+	// Copy (*state) array to output array
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+        {
+            output_data[offset + i * 4 + j] = (*state)[i][j];
+        }
+	}
+
+    for (int i = 0; i < mem_size; i++)
+        ret.push_back(output_data[i]);
+
+    write_file("Novel.txt.enc", ret);
+
+    free(output_data);
+    output_data = NULL;
+
+    return ret;
+}
+
+static void copy_block(unsigned char *input, unsigned char* output)
+{
+    // Code
+    for (unsigned char i = 0; i < AES_LENGTH; i++)
+        output[i] = input[i];
+}
+
+void cipher(void)
+{
+    // Variable Declarations
+    byte_t round = 0;
+
+    // Code
+    aes_cpu_add_round_key(0);
+
+	// Round 1 (R1) to AES_ROUNDS - 1 (R9)
+    for (round = 1; round < AES_ROUNDS; round++)
+    {
+        aes_cpu_byte_sub();
+        aes_cpu_shift_rows();
+        aes_cpu_mix_columns();
+        aes_cpu_add_round_key(round);
+    }
+
+	// Final Round Without Column Mixing
+	aes_cpu_byte_sub();
+	aes_cpu_shift_rows();
+	aes_cpu_add_round_key(AES_ROUNDS);
+}
+
+void decipher(void)
+{
+    // Code
+    // Variable Declarations
+    byte_t round = 0;
+
+    // Code
+    aes_cpu_add_round_key(AES_ROUNDS);
+
+	// Round AES_ROUNDS - 1 (R9) to Round 0
+    for (round = AES_ROUNDS - 1; round > 0; round--)
+    {
+        aes_cpu_shift_rows_inverse();
+        aes_cpu_byte_sub_inverse();
+        aes_cpu_add_round_key(round);
+        aes_cpu_mix_columns_inverse(); 
+    }
+
+	// Final Round Without Column Mixing
+	aes_cpu_shift_rows_inverse();
+    aes_cpu_byte_sub_inverse();
+    aes_cpu_add_round_key(0);
+}
+
+void aes_cpu_encrypt(byte_t* input, const byte_t* round_key, byte_t* output)
+{
+    // Code
+    copy_block(input, output);
+    state = (state_t*)output;
+    aes_round_key = round_key;
+
+    cipher();
+}
+
+void aes_cpu_decrypt(byte_t* input, const byte_t* round_key, byte_t* output)
+{
+    // Code
+    copy_block(input, output);
+    state = (state_t*)output;
+    aes_round_key = round_key;
+
+    decipher();
+}
+
+

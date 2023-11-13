@@ -9,18 +9,22 @@ using namespace std;
 // Macros
 #define DEBUG           true
 
+#define AES_BLOCK_SIZE  16
 #define AES_LENGTH      16
-#define IV_LENGTH       12
+#define AES_COLS        4
 #define AES_ROUNDS      10
 #define AES_BITS        128
-#define SUB_KEYS        (AES_ROUNDS + 1)
+#define AES_STATE_SIDE  4
 #define AES_SUCCESS     EXIT_SUCCESS
 #define AES_FAILURE     EXIT_FAILURE
 
-#define NUM_THREADS     20
+#if defined (_WIN32) || defined (_WIN64) || defined (WIN32) || defined (WIN64)
+    #define OS 1
+#elif defined(__linux)
+    #define OS 2
+#endif
 
 // Typedefs
 typedef unsigned char byte_t;
-typedef std::vector<unsigned char> byte_arr_t;
-typedef int status_t;
+typedef byte_t state_t[4][4];
 
